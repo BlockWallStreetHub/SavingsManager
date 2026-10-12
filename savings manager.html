@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savings Liquidation Manager</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a33; --panel2:#18224a; --line:#26335f;
+    --text:#e8ecf8; --muted:#8e9bc4; --gold:#f2b84b;
+    --ok:#2fd18a; --warn:#f2b84b; --danger:#ff5468;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Segoe UI,system-ui,sans-serif}
+  header{padding:22px 20px 8px;max-width:1100px;margin:0 auto}
+  h1{margin:0;font-size:24px;letter-spacing:.3px}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--muted);margin-top:4px}
+  main{max-width:1100px;margin:0 auto;padding:12px 20px 60px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+  .panel h2{margin:0 0 10px;font-size:16px;color:var(--gold)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:4px}
+  input,select,button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  input{min-width:120px}
+  input.wide{min-width:340px}
+  button{cursor:pointer;background:#22306a}
+  button:hover{background:#2c3d85}
+  button.gold{background:var(--gold);color:#1a1300;border-color:var(--gold);font-weight:600}
+  button.ghost{background:transparent}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .acct{border:1px solid var(--line);border-radius:14px;background:var(--panel);margin:14px 0;overflow:hidden}
+  .acct .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .acct .head b{font-size:17px}
+  .addr{color:var(--muted);font-size:12px;word-break:break-all}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-left:6px}
+  .body{padding:16px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+  .kpi{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .kpi small{color:var(--muted);display:block}
+  .kpi .v{font-size:22px;font-weight:700}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+  table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:14px}
+  th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden;min-width:90px}
+  .bar i{display:block;height:100%}
+  .stress{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .stress input[type=range]{width:100%;padding:0}
+  .note{color:var(--muted);font-size:12.5px}
+  .err{color:var(--danger);padding:12px 16px}
+  .status{color:var(--muted);font-size:13px;margin:6px 0}
+  .pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700}
+  .pill.ok{background:rgba(47,209,138,.15)} .pill.warn{background:rgba(242,184,75,.15)} .pill.danger{background:rgba(255,84,104,.18)}
+  .top{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .gwrap{flex:0 0 320px;max-width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 8px 10px;text-align:center}
+  .gwrap svg{width:100%;height:auto;display:block}
+  .gcap{font-size:12px;color:var(--muted);min-height:16px}
+  .top .kpis{flex:1 1 380px;margin-bottom:0}
+  .picwrap{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-bottom:14px}
+  .picwrap svg{width:100%;height:auto;display:block;margin-top:6px}
+  .pl{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;margin-top:4px;color:var(--muted)}
+  .pl b{color:var(--text);font-weight:600}
+  .pl i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .cush{margin-top:8px;font-size:14px}
+  .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .gold{color:var(--gold)} .pill.gold{background:rgba(242,184,75,.2)}
+  .mgr{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+  .mgr h3{margin:0;font-size:15px;color:var(--gold)}
+  .mh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .mc{border-left:4px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 12px;margin:8px 0}
+  .mc.t-ok{border-left-color:var(--ok)} .mc.t-warn{border-left-color:var(--warn)} .mc.t-danger{border-left-color:var(--danger)} .mc.t-gold{border-left-color:var(--gold)}
+  .mc b.t{display:block;margin-bottom:2px}
+  .mc p{margin:4px 0;font-size:14px}
+  .chip{display:inline-block;padding:1px 9px;border-radius:99px;font-size:11.5px;font-weight:700;border:1px solid var(--line);white-space:nowrap}
+  .chip.go{background:rgba(242,184,75,.2);color:var(--gold);border-color:var(--gold)}
+  .chip.mid{background:rgba(142,155,196,.15);color:var(--text)}
+  .chip.no{color:var(--muted)}
+  .mtab td,.mtab th{font-size:13px}
+  details{margin-top:8px} summary{cursor:pointer;color:var(--gold)}
+  details p,details li{font-size:13.5px;color:var(--text)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Savings <span>Liquidation Manager</span></h1>
+  <div class="sub">Aave V3 on Ethereum, Arbitrum, Base, Optimism and Avalanche. Read-only: paste public addresses only, never a seed phrase or private key.</div>
+</header>
+<main>
+
+  <section class="panel">
+    <h2>Accounts to watch</h2>
+    <div class="row">
+      <label>Name<input id="newLabel" placeholder="e.g. Main wallet"></label>
+      <label>Network
+        <select id="newNet"><option value="eth">Ethereum</option><option value="arb">Arbitrum</option><option value="base">Base</option><option value="op">Optimism</option><option value="avax">Avalanche</option></select>
+      </label>
+      <label>Address (0x...)<input id="newAddr" class="wide" placeholder="Wallet address or Instadapp DSA address"></label>
+      <label>Type
+        <select id="newType"><option>Wallet</option><option>Instadapp DSA</option></select>
+      </label>
+      <button class="gold" id="addBtn">Add</button>
+    </div>
+    <p class="note">Add one entry per network. The same address can be watched on several networks. For Instadapp, use the <b>DSA address</b> (the smart account that holds the Aave position), not your wallet address. You can find it in the Instadapp account selector.</p>
+    <div id="acctList"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Alert settings</h2>
+    <div class="row">
+      <label>Caution when health factor below<input id="warnHF" type="number" step="0.05" value="1.5" style="width:110px"></label>
+      <label>Danger when health factor below<input id="dangerHF" type="number" step="0.05" value="1.25" style="width:110px"></label>
+      <label>Refresh every (seconds)<input id="refreshSec" type="number" step="10" min="20" value="60" style="width:110px"></label>
+      <label>Repeat danger alert every (min)<input id="cooldownMin" type="number" step="5" min="5" value="30" style="width:110px"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Discord webhook URL (optional)<input id="discord" class="wide" placeholder="https://discord.com/api/webhooks/..."></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Telegram bot token (optional)<input id="tgToken" placeholder="123456:ABC..."></label>
+      <label>Telegram chat ID<input id="tgChat" placeholder="123456789"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Email alerts: Web3Forms access key (optional)<input id="wfKey" class="wide" placeholder="paste your Web3Forms access key"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Phone push alerts: ntfy topic name (optional)<input id="ntfyTopic" class="wide" placeholder="a long random name, e.g. bws-liq-8f3k29xq7z"></label>
+    </div>
+    <p class="note"><b>Email:</b> get a free access key at web3forms.com using the email address that should receive the alerts, then paste it above. <b>Phone push:</b> install the free ntfy app, subscribe to the same topic name, and alerts arrive like a text. Anyone who knows the topic name can read the alerts, so make it long and random.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="gold" id="saveBtn">Save &amp; start watching</button>
+      <button id="testBtn">Send test alert</button>
+      <button id="refreshBtn" class="ghost">Refresh now</button>
+    </div>
+    <p class="note">Alerts (sound, desktop notification, Discord, Telegram) only fire while this page is open in a browser tab. Settings are saved in this browser on this computer only.</p>
+    <div class="status" id="status">Not started.</div>
+  </section>
+
+  <section class="panel">
+    <h2>AI Manager settings</h2>
+    <div class="row">
+      <label>Floor health factor to secure<input id="mFloor" type="number" step="0.01" min="1" value="1.02" style="width:150px"></label>
+      <label>Add ETH when health factor rises (%)<input id="mStep" type="number" step="1" min="1" value="15" style="width:170px"></label>
+      <label>Assumed market move for sizing (%)<input id="mStress" type="number" step="1" min="1" max="90" value="20" style="width:170px"></label>
+    </div>
+    <p class="note">Each account below gets an AI Manager panel. Set each account's <b>reference health factor</b> in the "Accounts to watch" list above. The "rises 15%" rule is measured from that number.</p>
+    <details>
+      <summary>How the AI Manager thinks</summary>
+      <p>It is a set of rules written from your playbook, not a model that predicts prices. It reads your live Aave position, applies the rules below, and explains the result in plain words.</p>
+      <ul>
+        <li><b>Secure the floor.</b> It asks what your health factor would be if the market fell by the assumed move. If that is under your floor, it works out how much volatile collateral to swap into stablecoin to hold the floor.</li>
+        <li><b>Add ETH.</b> When your health factor is 15% above your reference, it works out how much stablecoin collateral you could swap into ETH and still hold the floor through that same market move.</li>
+        <li><b>Debt swap.</b> A debt swap turns part of your stablecoin borrow into a borrow of BTC, ETH, AVAX, ARB or OP, depending on the network. Your debt balance then moves with that coin's price. If it falls, you owe less (like a short). If it rises, you owe more and your health factor falls. The manager says it seems to be the best time when a coin has lost both the weekly and the monthly 20 EMA, and only lists coins that Aave lets you borrow on that network.</li>
+        <li><b>Exit.</b> If you already owe a volatile coin and it climbs back above its weekly 20 EMA, it suggests swapping that debt back to stablecoin.</li>
+        <li>New signals also trigger your alerts (email, phone push, Discord, Telegram) once, when they first appear.</li>
+      </ul>
+    </details>
+  </section>
+
+  <div id="results"></div>
+
+  <p class="note">How it reads: health factor and totals come straight from the Aave Pool contract; per-asset balances, liquidation thresholds and prices come from Aave's data provider and price oracle. A liquidation price is the price at which that one asset alone would push health factor to 1.0, with everything else held at today's price. The stress slider moves all non-stablecoin assets down together, which is closer to how a real crash works. Only assets that have a collateral factor on Aave count toward liquidation, and that includes tokens like ARB, OP and AAVE on the networks where Aave lists them. Assets you supplied that have no collateral factor are shown in a separate table. On Ethereum this reads the main Aave V3 market. Price history for the 20 EMA comes from CryptoCompare, with Coinbase as a backup. Not financial advice.</p>
+</main>
+
+<script>
+// Load ethers (with a backup CDN)
+(function(){
+  function load(src, cb, fail){var s=document.createElement('script');s.src=src;s.onload=cb;s.onerror=fail;document.head.appendChild(s);}
+  load('https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js', boot, function(){
+    load('https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js', boot, function(){
+      document.getElementById('status').textContent='Could not load the ethers library. Check your internet connection and reload.';
+    });
+  });
+})();
+
+function boot(){
+const NETS={ // ap = Aave V3 PoolAddressesProvider on that network
+ eth:{name:'Ethereum',chain:1,ap:'0x2f39d218133afab8f2b819b1066c7e434ad94e9e',rpcs:['https://ethereum-rpc.publicnode.com','https://eth.llamarpc.com','https://1rpc.io/eth']},
+ arb:{name:'Arbitrum',chain:42161,ap:'0xa97684ead0e402dc232d5a977953df7ecbab3cdb',rpcs:['https://arb1.arbitrum.io/rpc','https://arbitrum-one-rpc.publicnode.com','https://1rpc.io/arb']},
+ base:{name:'Base',chain:8453,ap:'0xe20fcbdbffc4dd138ce8b2e6fbb6cb49777ad64d',rpcs:['https://mainnet.base.org','https://base-rpc.publicnode.com','https://1rpc.io/base']},
+ op:{name:'Optimism',chain:10,ap:'0xa97684ead0e402dc232d5a977953df7ecbab3cdb',rpcs:['https://mainnet.optimism.io','https://optimism-rpc.publicnode.com','https://1rpc.io/op']},
+ avax:{name:'Avalanche',chain:43114,ap:'0xa97684ead0e402dc232d5a977953df7ecbab3cdb',rpcs:['https://api.avax.network/ext/bc/C/rpc','https://avalanche-c-chain-rpc.publicnode.com','https://1rpc.io/avax/c']}
+};
+const ABI_AP=["function getPool() view returns (address)","function getPriceOracle() view returns (address)","function getPoolDataProvider() view returns (address)"];
+const ABI_POOL=["function getUserAccountData(address) view returns (uint256 totalCollateralBase,uint256 totalDebtBase,uint256 availableBorrowsBase,uint256 currentLiquidationThreshold,uint256 ltv,uint256 healthFactor)"];
+const ABI_DP=[
+ "function getAllReservesTokens() view returns (tuple(string symbol,address tokenAddress)[])",
+ "function getUserReserveData(address asset,address user) view returns (uint256 currentATokenBalance,uint256 currentStableDebt,uint256 currentVariableDebt,uint256 principalStableDebt,uint256 scaledVariableDebt,uint256 stableBorrowRate,uint256 liquidityRate,uint40 stableRateLastUpdated,bool usageAsCollateralEnabled)",
+ "function getReserveConfigurationData(address asset) view returns (uint256 decimals,uint256 ltv,uint256 liquidationThreshold,uint256 liquidationBonus,uint256 reserveFactor,bool usageAsCollateralEnabled,bool borrowingEnabled,bool stableBorrowRateEnabled,bool isActive,bool isFrozen)"
+];
+const ABI_OR=["function getAssetsPrices(address[] assets) view returns (uint256[])"];
+
+const KEY="avaxLiqWatch.v1";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let state={accounts:[],lastNet:'avax',warn:1.5,danger:1.25,refresh:60,cooldown:30,discord:'',tgToken:'',tgChat:'',wfKey:'',ntfyTopic:'',floor:1.02,step:15,stress:20,refs:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) state=Object.assign(state,s);}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+state.accounts.forEach(a=>{if(!a.net)a.net='avax';}); // accounts saved before the network picker were Avalanche
+const accId=a=>a.net+':'+a.addr;
+const netName=a=>(NETS[a.net]||NETS.avax).name;
+
+let timer=null, audioCtx=null;
+const lastLevel={}, lastAlertAt={}, results={};
+
+// ---------- formatting ----------
+const usd=n=>'$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:2});
+const price=n=>n>=100?usd(n):n>=1?'$'+n.toFixed(3):'$'+n.toPrecision(3);
+const qty=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:n<1?6:4});
+const hfText=h=>h===Infinity?'No debt':h.toFixed(2);
+const levelOf=h=>h<=state.danger?2:h<=state.warn?1:0;
+const cls=l=>['ok','warn','danger'][l];
+const isStable=sym=>/usd|dai|frax|gho/i.test(sym);
+const KEYOF=sym=>{ // which price series a token follows
+  if(/^(W?BTC|cbBTC|BTC\.b|WBTC\.e|tBTC|LBTC|eBTC)$/i.test(sym)) return 'BTC';
+  if(/^(W?ETH|WETH\.e|wstETH|weETH|cbETH|rETH|ezETH|osETH)$/i.test(sym)) return 'ETH';
+  if(/^(W?AVAX|sAVAX)$/i.test(sym)) return 'AVAX';
+  if(/^ARB$/i.test(sym)) return 'ARB';
+  if(/^OP$/i.test(sym)) return 'OP';
+  return null;
+};
+
+// ---------- chain reads ----------
+async function fetchPosition(addr,p,net){
+  const ap=new ethers.Contract(net.ap,ABI_AP,p);
+  const [poolA,oracleA,dpA]=await Promise.all([ap.getPool(),ap.getPriceOracle(),ap.getPoolDataProvider()]);
+  const pool=new ethers.Contract(poolA,ABI_POOL,p), oracle=new ethers.Contract(oracleA,ABI_OR,p), dp=new ethers.Contract(dpA,ABI_DP,p);
+  const acct=await pool.getUserAccountData(addr);
+  const tokens=await dp.getAllReservesTokens();
+  const ur=await Promise.all(tokens.map(t=>dp.getUserReserveData(t.tokenAddress,addr)));
+  const active=[];
+  tokens.forEach((t,i)=>{
+    const u=ur[i], debt=u.currentVariableDebt+u.currentStableDebt;
+    if(u.currentATokenBalance>0n||debt>0n) active.push({sym:t.symbol,addr:t.tokenAddress,aBal:u.currentATokenBalance,debt,collOn:u.usageAsCollateralEnabled});
+  });
+  const [cfgs,prices]=await Promise.all([
+    Promise.all(active.map(a=>dp.getReserveConfigurationData(a.addr))),
+    active.length?oracle.getAssetsPrices(active.map(a=>a.addr)):Promise.resolve([])
+  ]);
+  const assets=active.map((a,i)=>{
+    const dec=Number(cfgs[i].decimals);
+    return {sym:a.sym,collOn:a.collOn,
+      amt:Number(ethers.formatUnits(a.aBal,dec)),
+      debtAmt:Number(ethers.formatUnits(a.debt,dec)),
+      price:Number(prices[i])/1e8,
+      lt:Number(cfgs[i].liquidationThreshold)/1e4};
+  });
+  let extra={cands:[],stableLT:0};
+  try{
+    const CAND=/^(WBTC|WBTC\.e|BTC\.b|cbBTC|WETH|WETH\.e|WAVAX|ARB|OP)$/, STAB=/^(USDC|USDC\.e|USDT|USDt|DAI|DAI\.e)$/;
+    const candT=tokens.filter(t=>CAND.test(t.symbol)), stabT=tokens.filter(t=>STAB.test(t.symbol));
+    const [cc,sc]=await Promise.all([
+      Promise.all(candT.map(t=>dp.getReserveConfigurationData(t.tokenAddress).catch(()=>null))),
+      Promise.all(stabT.map(t=>dp.getReserveConfigurationData(t.tokenAddress).catch(()=>null)))
+    ]);
+    extra.cands=candT.map((t,i)=>cc[i]?{sym:t.symbol,key:KEYOF(t.symbol),lt:Number(cc[i].liquidationThreshold)/1e4,
+      borrowOk:!!(cc[i].borrowingEnabled&&cc[i].isActive&&!cc[i].isFrozen)}:null).filter(Boolean);
+    stabT.forEach((t,i)=>{ const c=sc[i]; if(c&&!extra.stableLT&&Number(c.liquidationThreshold)>0&&c.usageAsCollateralEnabled) extra.stableLT=Number(c.liquidationThreshold)/1e4; });
+  }catch(e){}
+  return {acct,assets,extra};
+}
+async function fetchWithFallback(addr,net){
+  let lastErr;
+  for(const url of net.rpcs){
+    try{
+      const p=new ethers.JsonRpcProvider(url,net.chain,{staticNetwork:true});
+      const r=await fetchPosition(addr,p,net);
+      r.rpc=new URL(url).host; return r;
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error('All RPC endpoints failed');
+}
+
+// ---------- math ----------
+function analyze(raw){
+  const {acct,assets}=raw;
+  const totalColl=Number(acct.totalCollateralBase)/1e8, totalDebt=Number(acct.totalDebtBase)/1e8;
+  const hf=acct.healthFactor>=(2n**255n)?Infinity:Number(acct.healthFactor)/1e18;
+  const onLT=Number(acct.currentLiquidationThreshold)/1e4;
+  const colls=assets.filter(a=>a.amt>0&&a.collOn&&a.lt>0).map(a=>({...a,val:a.amt*a.price}));
+  const rawW=colls.reduce((s,c)=>s+c.val*c.lt,0);
+  const scale=rawW>0?(totalColl*onLT)/rawW:1; // handles eMode / adjusted thresholds
+  colls.forEach(c=>{c.ltEff=c.lt*scale;});
+  const debts=assets.filter(a=>a.debtAmt>0).map(a=>({...a,val:a.debtAmt*a.price}));
+  const W=colls.reduce((s,c)=>s+c.val*c.ltEff,0);
+  const D=debts.reduce((s,d)=>s+d.val,0);
+  colls.forEach(c=>{
+    const need=D-(W-c.val*c.ltEff);
+    c.liq=(D>0&&need>0)?need/(c.amt*c.ltEff):null;
+    c.drop=c.liq!=null?1-c.liq/c.price:null;
+  });
+  debts.forEach(d=>{
+    if(isStable(d.sym)){d.liq=null;return;}
+    const room=W-(D-d.val);
+    d.liq=room>0?room/d.debtAmt:0;
+    d.rise=d.liq/d.price-1;
+  });
+  const ignored=assets.filter(a=>a.amt>0&&!(a.collOn&&a.lt>0)).map(a=>({...a,val:a.amt*a.price,reason:a.lt>0?'off':'nocf'})).filter(a=>a.val>=0.01);
+  return {hf,totalColl,totalDebt,onLT,colls,debts,W,D,ignored,scale};
+}
+function hfAt(a,x){ // x = market drop 0..1 on non-stable assets
+  const cw=a.colls.reduce((s,c)=>s+c.val*c.ltEff*(isStable(c.sym)?1:1-x),0);
+  const dv=a.debts.reduce((s,d)=>s+d.val*(isStable(d.sym)?1:1-x),0);
+  return dv>0?cw/dv:Infinity;
+}
+function breakEvenDrop(a){
+  let Cv=0,Cs=0,Dv=0,Ds=0;
+  a.colls.forEach(c=>{const w=c.val*c.ltEff; isStable(c.sym)?Cs+=w:Cv+=w;});
+  a.debts.forEach(d=>{isStable(d.sym)?Ds+=d.val:Dv+=d.val;});
+  if(Ds+Dv===0) return null;
+  if(Cv-Dv<=0) return Cs>=Ds+Dv?null:0;
+  const k=(Ds-Cs)/(Cv-Dv);
+  if(k<=0) return null;
+  return Math.max(0,1-k);
+}
+function closest(a){
+  let best=null;
+  a.colls.forEach(c=>{if(c.drop!=null&&(!best||c.drop<best.drop)) best={sym:c.sym,liq:c.liq,drop:c.drop,price:c.price};});
+  return best;
+}
+
+// ---------- market trend (weekly and monthly 20 EMA) ----------
+const CB_PROD={BTC:'BTC-USD',ETH:'ETH-USD',AVAX:'AVAX-USD',ARB:'ARB-USD',OP:'OP-USD'};
+const MKT={cache:{},inflight:{}};
+async function getJSON(url){
+  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),12000);
+  try{ const r=await fetch(url,{signal:ctl.signal}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  finally{ clearTimeout(to); }
+}
+async function dailyCC(sym){ // CryptoCompare: up to 2001 daily candles
+  const j=await getJSON('https://min-api.cryptocompare.com/data/v2/histoday?fsym='+sym+'&tsym=USD&limit=2000');
+  if(j.Response==='Error') throw new Error(j.Message||'CryptoCompare error');
+  const rows=(j.Data&&j.Data.Data)||[];
+  const out=rows.filter(r=>r.close>0).map(r=>({t:r.time*1000,c:r.close}));
+  if(out.length<200) throw new Error('not enough price history');
+  return out;
+}
+async function dailyCB(sym){ // Coinbase Exchange: 300 daily candles per request, a few requests back in time
+  const prod=CB_PROD[sym]; if(!prod) throw new Error('no Coinbase market for '+sym);
+  const map=new Map(), now=new Date();
+  let end=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1);
+  for(let i=0;i<5;i++){
+    const start=end-290*864e5;
+    const rows=await getJSON('https://api.exchange.coinbase.com/products/'+prod+'/candles?granularity=86400&start='+new Date(start).toISOString()+'&end='+new Date(end).toISOString());
+    if(!Array.isArray(rows)||!rows.length) break;
+    rows.forEach(r=>map.set(r[0]*1000,r[4]));
+    end=start;
+  }
+  const out=[...map.entries()].sort((p,q)=>p[0]-q[0]).map(e=>({t:e[0],c:e[1]}));
+  if(out.length<200) throw new Error('not enough price history');
+  return out;
+}
+function barCloses(daily,mode){ // roll daily closes up into weekly (Monday start, UTC) or monthly bars, including the live bar
+  const m=new Map();
+  daily.forEach(d=>{
+    const dt=new Date(d.t); let k;
+    if(mode==='w'){ const dow=(dt.getUTCDay()+6)%7; k=Math.floor(d.t/864e5)-dow; }
+    else k=dt.getUTCFullYear()*12+dt.getUTCMonth();
+    m.set(k,d.c); // daily is ascending, so the last close inside each bar wins
+  });
+  return [...m.entries()].sort((p,q)=>p[0]-q[0]).map(e=>e[1]);
+}
+function ema(vals,n){
+  if(vals.length<n) return null;
+  const k=2/(n+1); let e=vals[0];
+  for(let i=1;i<vals.length;i++) e=vals[i]*k+e*(1-k);
+  return e;
+}
+async function loadOne(sym){
+  const c=MKT.cache[sym];
+  if(c&&Date.now()-c.at<(c.err?120e3:900e3)) return c;
+  if(MKT.inflight[sym]) return MKT.inflight[sym];
+  MKT.inflight[sym]=(async()=>{
+    let daily,src,err;
+    try{ daily=await dailyCC(sym); src='CryptoCompare'; }
+    catch(e1){ try{ daily=await dailyCB(sym); src='Coinbase'; }catch(e2){ err=(e2&&e2.message)||(e1&&e1.message)||'unreachable'; } }
+    let rec;
+    if(!daily) rec=(c&&!c.err)?{...c,at:Date.now(),stale:true}:{at:Date.now(),err};
+    else{
+      const w=barCloses(daily,'w'), mo=barCloses(daily,'m');
+      rec={at:Date.now(),src,price:daily[daily.length-1].c,wEma:ema(w,20),mEma:ema(mo,20),wBars:w.length,mBars:mo.length};
+    }
+    MKT.cache[sym]=rec; delete MKT.inflight[sym];
+    return rec;
+  })();
+  return MKT.inflight[sym];
+}
+async function loadMarket(keys){
+  const out={};
+  await Promise.all(keys.map(async k=>{ try{ out[k]=await loadOne(k); }catch(e){ out[k]={err:(e&&e.message)||'error'}; } }));
+  return out;
+}
+function trendOf(mk,key){
+  const m=mk&&key&&mk[key];
+  if(!m||m.err||m.wEma==null) return {ok:false,err:(m&&m.err)||'no data'};
+  const wBelow=m.price<m.wEma, mBelow=m.mEma==null?null:m.price<m.mEma;
+  return {ok:true,price:m.price,wEma:m.wEma,mEma:m.mEma,wPct:m.price/m.wEma-1,mPct:m.mEma==null?null:m.price/m.mEma-1,
+    wBelow,mBelow,both:wBelow&&mBelow===true,any:wBelow||mBelow===true,stale:!!m.stale};
+}
+
+// ---------- AI Manager (rule-based commentary) ----------
+const sum=(arr,f)=>arr.reduce((s,x)=>s+f(x),0);
+const pct=(v,d)=>(v*100).toFixed(d==null?1:d)+'%';
+function manage(acc,a,raw,mk){
+  const id=accId(acc), floor=state.floor, step=state.step/100, x=state.stress/100, k=1-x;
+  const ex=raw.extra||{cands:[],stableLT:0};
+  const sc=a.scale||1;
+  const vol=a.colls.filter(c=>!isStable(c.sym)), stc=a.colls.filter(c=>isStable(c.sym));
+  const V=sum(vol,c=>c.val), Sv=sum(stc,c=>c.val);
+  const lv=V>0?sum(vol,c=>c.val*c.ltEff)/V:0;
+  const lsOwn=Sv>0?sum(stc,c=>c.val*c.ltEff)/Sv:0;
+  const ls=lsOwn||(ex.stableLT?ex.stableLT*sc:0.78*sc);
+  const ethC=ex.cands.find(c=>c.key==='ETH'&&c.lt>0);
+  const ltE=(ethC?ethC.lt:0.8)*sc;
+  const Ds=sum(a.debts.filter(d=>isStable(d.sym)),d=>d.val), Dv=a.D-Ds;
+  const Dx=Ds+Dv*k;                       // debt if the market moves by the assumed amount
+  const hf=a.hf, ref=state.refs[id]||hf;
+  const notes=[], signals=[];
+  const say=(tone,title,body,short)=>notes.push({tone,title,body,short});
+
+  if(!(a.D>0)||hf===Infinity){
+    say('ok','No debt right now','<p>Nothing is borrowed, so nothing can be liquidated and there is nothing to swap. The manager has no action for this account.</p>','No debt');
+    return {headline:'No debt',tone:'ok',notes,signals};
+  }
+
+  // 1. health factor against the floor
+  {
+    const hx=hfAt(a,x), sensitive=V>=1||Dv>=1;
+    let tone='ok', short='Hold', lead;
+    if(hf<=floor*1.03){
+      tone='danger'; short='Act now';
+      lead='<p>Health factor <b>'+hf.toFixed(2)+'</b> is only '+pct(hf/floor-1)+' above your floor of '+floor.toFixed(2)+'. Swapping collateral barely moves it. What raises it today is repaying debt or adding collateral.</p>';
+    }else{
+      const l=levelOf(hf); if(l>0){ tone='warn'; short='Watch'; }
+      lead='<p>Health factor <b>'+hf.toFixed(2)+'</b> is <b>'+pct(hf/floor-1)+'</b> above your floor of '+floor.toFixed(2)+'. Your collateral limit can shrink about <b>'+pct(1-floor/hf)+'</b> before it reaches that floor.'
+        +(hf<=state.danger?' That is inside the Danger zone of your alert settings, but still above the floor.':'')+'</p>';
+    }
+    lead+=sensitive?'<p>If the market fell '+state.stress+'% the health factor would be <b>'+hx.toFixed(2)+'</b>'+(hx<floor?', below your floor.':'.')+'</p>'
+      :'<p class="note">Price swings in crypto do not change this health factor, because both your collateral and your debt are stablecoins.</p>';
+    say(tone,'Health factor vs your floor',lead,short);
+  }
+
+  // 2. collateral swap to stablecoin to secure the floor
+  if(V>=1){
+    const base=lv*V*k+ls*Sv, gapW=floor*Dx-base, den=ls-lv*k, hx=hfAt(a,x);
+    const vkeys=[...new Set(vol.filter(c=>c.val>=1).map(c=>KEYOF(c.sym)).filter(Boolean))];
+    const tl=vkeys.map(key=>({key,t:trendOf(mk,key)}));
+    const bear=tl.filter(o=>o.t.ok&&o.t.wBelow);
+    const trendLine=bear.length?'<p>Trend: '+bear.map(o=>esc(o.key)+' is '+pct(-o.t.wPct)+' below its weekly 20 EMA').join(', ')+'. That adds weight to being defensive.</p>'
+      :tl.some(o=>o.t.ok)?'<p>Trend: your volatile collateral is holding above its weekly 20 EMA, so there is no chart reason to rush.</p>'
+      :'<p class="note">Trend data is unavailable right now.</p>';
+    if(gapW<=0){
+      say('ok','Collateral swap: no need to secure the floor',
+        '<p>You hold <b>'+usd(Math.round(V))+'</b> of volatile collateral. Even if the market fell '+state.stress+'%, your health factor would stay at <b>'+hx.toFixed(2)+'</b>, above your '+floor.toFixed(2)+' floor. No swap into stablecoins is needed.</p>'+trendLine,'Hold');
+    }else{
+      let s=den>0.0001?gapW/den:Infinity, impossible=false;
+      if(s>V){ s=V; impossible=true; }
+      const tone=hx<1?'danger':'warn';
+      signals.push({id:'derisk',text:'Floor at risk: a '+state.stress+'% market drop would take health factor to '+hx.toFixed(2)+', below your '+floor.toFixed(2)+' floor. '+(impossible?'Repay debt or add collateral.':'Consider swapping about '+usd(Math.round(s))+' of volatile collateral into stablecoin.')});
+      say(tone,'Collateral swap: secure the floor',
+        '<p>If the market fell '+state.stress+'%, your health factor would drop to <b>'+hx.toFixed(2)+'</b>, below your floor of '+floor.toFixed(2)+'.</p>'
+        +(impossible
+          ?'<p><b>Even moving all of your volatile collateral into stablecoins would not hold the floor.</b> Repay some debt or add collateral instead.</p>'
+          :'<p>To hold the floor through that drop, swap about <b>'+usd(Math.round(s))+'</b> ('+pct(s/V,0)+') of your volatile collateral into stablecoin. In the Aave app that is the Swap button on the supplied asset.</p>')
+        +trendLine,'Secure the floor');
+    }
+  }else{
+    const worst=stc.filter(c=>c.liq!=null).sort((p,q)=>p.drop-q.drop)[0];
+    say(worst&&worst.drop<0.05?'danger':worst&&worst.drop<0.15?'warn':'ok','Collateral is all stablecoin',
+      '<p>Price moves in BTC, ETH, AVAX, ARB and OP do not touch your health factor. Your real exposure is a stablecoin depeg.'
+      +(worst?' '+esc(worst.sym)+' would liquidate you at about <b>'+price(worst.liq)+'</b>, a <b>'+pct(worst.drop)+'</b> depeg.':' No depeg of your collateral alone can liquidate you at the moment.')+'</p>',
+      worst&&worst.drop<0.15?'Watch':'Hold');
+  }
+
+  // 3. re-risk: add ETH when the health factor has risen 15% above the reference
+  if(Sv>=1){
+    const num=lv*V*k+ls*Sv-floor*Dx, den2=ls-k*ltE;
+    const t=den2>0.0001?Math.max(0,Math.min(Sv,num/den2)):(num>=0?Sv:0);
+    const trig=ref*(1+step), up0=hf/ref-1, up=Math.abs(up0)<0.0005?0:up0, hit=hf>=trig;
+    const upTxt=(up>=0?'+':'')+pct(up);
+    if(hit&&t>=50){
+      signals.push({id:'rerisk',text:'Health factor is up '+pct(up,0)+' from your reference ('+ref.toFixed(2)+' to '+hf.toFixed(2)+'). You could swap up to about '+usd(Math.round(t))+' of stablecoin collateral into ETH and still hold your floor through a '+state.stress+'% drop.'});
+      say('gold','Collateral swap: time to add ETH',
+        '<p>Health factor is <b>'+hf.toFixed(2)+'</b>, up <b>'+pct(up)+'</b> from your reference of '+ref.toFixed(2)+' (trigger '+trig.toFixed(2)+'). That is the signal to put some stablecoin collateral to work.</p>'
+        +'<p>You could swap up to about <b>'+usd(Math.round(t))+'</b> of stablecoin collateral into ETH and still hold your '+floor.toFixed(2)+' floor if the market then fell '+state.stress+'%. Two or three slices is safer than all at once. Afterwards press <b>Use current</b> next to this account at the top of the page so the next 15% is measured from the new level.</p>','Add ETH');
+    }else if(hit){
+      say('warn','Collateral swap: health factor is up, but there is no room yet',
+        '<p>Health factor is up '+pct(up)+' from your reference, but a '+state.stress+'% market drop after adding ETH would put you under your '+floor.toFixed(2)+' floor, so the manager would wait.</p>','Wait');
+    }else{
+      say('info','Collateral swap: add ETH when health factor rises '+state.step+'%',
+        '<p>Your reference health factor is '+ref.toFixed(2)+' and today it is <b>'+hf.toFixed(2)+'</b> ('+upTxt+'). The manager will say it is time to add ETH at <b>'+trig.toFixed(2)+'</b>.'
+        +(t>=50?' For reference, today you could move up to '+usd(Math.round(t))+' into ETH and still hold the floor through a '+state.stress+'% drop.':' Today there is no room to do that safely.')+'</p>','Hold');
+    }
+  }
+
+  // 4. debt swap into a volatile coin (a short on the debt balance)
+  {
+    const rows=ex.cands.map(c=>({...c,tr:trendOf(mk,c.key)}));
+    const open=rows.filter(r=>r.borrowOk&&r.tr.ok&&r.tr.both);
+    const canSwap=Ds>=1, room=a.W/floor-a.D, maxSwap=room>0?Math.min(Ds,room/x):0;
+    let tbl='<table class="mtab"><tr><th>Swap debt into</th><th>Borrowable here</th><th>Price</th><th>vs weekly 20 EMA</th><th>vs monthly 20 EMA</th><th>Verdict</th></tr>';
+    rows.forEach(r=>{
+      const t=r.tr; let w='n/a', mo='n/a', v;
+      if(t.ok){
+        w=price(t.wEma)+'<div class="note">'+(t.wBelow?'below by '+pct(-t.wPct):'above by '+pct(t.wPct))+'</div>';
+        mo=t.mEma==null?'<span class="note">too little history</span>':price(t.mEma)+'<div class="note">'+(t.mBelow?'below by '+pct(-t.mPct):'above by '+pct(t.mPct))+'</div>';
+      }
+      if(!r.borrowOk) v='<span class="chip no">Not borrowable here</span>';
+      else if(!t.ok) v='<span class="chip no">No trend data</span>';
+      else if(t.both) v='<span class="chip go">WINDOW OPEN</span>';
+      else if(t.wBelow&&t.mBelow===null) v='<span class="chip mid">Weekly lost, monthly n/a</span>';
+      else if(t.any) v='<span class="chip mid">Early: lost one</span>';
+      else v='<span class="chip no">Not yet</span>';
+      tbl+='<tr><td>'+esc(r.sym)+'</td><td>'+(r.borrowOk?'<span class="ok">Yes</span>':'<span class="danger">No</span>')+'</td><td>'+(t.ok?price(t.price):'n/a')+'</td><td>'+w+'</td><td>'+mo+'</td><td>'+v+'</td></tr>';
+    });
+    tbl+='</table><p class="note">Uses the live weekly and monthly bar the way a chart does, so a coin can still reclaim its EMA before the bar closes. A debt swap is a leveraged short on that coin. Swap fees and slippage apply, and the Aave market needs borrowing room and available liquidity in the coin.</p>';
+    let tone='info', title='Debt swap: no window yet', short='Hold', body;
+    const nd=rows.length&&rows.every(r=>!r.tr.ok);
+    const names=list=>list.map(r=>'<b>'+esc(r.sym)+'</b>').join(', ');
+    if(!rows.length){
+      body='<p>None of BTC, ETH, AVAX, ARB or OP are reserves on this Aave market.</p>';
+    }else if(open.length&&canSwap){
+      tone='gold'; title='Debt swap: it seems to be the best time'; short='Debt swap window';
+      const best=open.slice().sort((p,q)=>p.tr.wPct-q.tr.wPct)[0], d=Math.min(Ds*0.25,maxSwap), sy=esc(best.sym);
+      body='<p>'+names(open)+(open.length>1?' have':' has')+' lost both the weekly and the monthly 20 EMA, the setup you watch for. A debt swap turns part of your stablecoin borrow into a borrow of that coin, so your debt balance moves with its price: if it keeps falling your debt shrinks (like a short), and if it bounces your debt grows.</p>';
+      if(maxSwap<1) body+='<p><b>Sizing:</b> your health factor has no spare room to carry that extra price risk, so the manager would not open one right now.</p>';
+      else body+='<p><b>Sizing for '+sy+':</b> to stay above your '+floor.toFixed(2)+' floor even if it rose '+state.stress+'% after the swap, keep the swap under about <b>'+usd(Math.round(maxSwap))+'</b>. Example: swap '+usd(Math.round(d))+' ('+pct(d/Ds,0)+' of your stablecoin debt). If '+sy+' falls '+state.stress+'%, that debt shrinks by '+usd(Math.round(d*x))+' (health factor '+(a.W/(a.D-d*x)).toFixed(2)+'). If it rises '+state.stress+'%, it grows by '+usd(Math.round(d*x))+' (health factor '+(a.W/(a.D+d*x)).toFixed(2)+').</p>';
+      if(hf<=state.warn) body+='<p class="warn"><b>Careful:</b> your health factor is already below your caution line. A debt swap does not raise it today, and it adds the risk of the coin rising. Fix the health factor first if you can.</p>';
+      open.forEach(r=>signals.push({id:'swapwin:'+r.sym,text:'Debt swap window open: '+r.sym+' lost both the weekly and monthly 20 EMA. Consider swapping part of your stablecoin debt into '+r.sym+'.'}));
+    }else if(open.length){
+      body='<p>'+names(open)+(open.length>1?' have':' has')+' lost both EMAs, but this account has no stablecoin debt to swap.</p>';
+    }else if(nd){
+      title='Debt swap: trend data unavailable';
+      const why=(rows[0].tr&&rows[0].tr.err)||'unreachable';
+      body='<p>The price history could not be loaded ('+esc(why)+'), so the weekly and monthly 20 EMA check is paused.</p>';
+    }else{
+      const early=rows.filter(r=>r.borrowOk&&r.tr.ok&&r.tr.any);
+      body=early.length?'<p>'+names(early)+(early.length>1?' have':' has')+' lost one of the two EMAs but not both yet. Watch for the second one.</p>'
+        :'<p>No borrowable coin on this network has lost both the weekly and monthly 20 EMA, so the manager does not see a short-the-debt setup yet.</p>';
+    }
+    say(tone,title,body+(rows.length?tbl:''),short);
+  }
+
+  // 5. existing volatile debt: exit signal
+  a.debts.filter(d=>!isStable(d.sym)&&d.val>=1).forEach(d=>{
+    const key=KEYOF(d.sym), t=key?trendOf(mk,key):{ok:false};
+    const owe='You owe '+qty(d.debtAmt)+' '+esc(d.sym)+' ('+usd(Math.round(d.val))+').';
+    const liqTxt=d.rise!=null&&d.rise>0?' It would liquidate you if '+esc(d.sym)+' rose about '+pct(d.rise)+'.':'';
+    if(!t.ok){ say('info','Existing '+d.sym+' debt','<p>'+owe+' Trend data is unavailable.'+liqTxt+'</p>','Watch'); return; }
+    if(!t.wBelow){
+      signals.push({id:'exit:'+d.sym,text:d.sym+' is back above its weekly 20 EMA. If your '+d.sym+' debt is a short, consider swapping it back to stablecoin.'});
+      say('warn','Existing '+d.sym+' debt: consider swapping it back to stablecoin','<p>'+owe+' '+esc(d.sym)+' is back above its weekly 20 EMA ('+pct(t.wPct)+' above), so the downtrend may be over. If this debt is your short, swapping it back to stablecoin locks in the lower balance.'+liqTxt+'</p>','Swap debt back');
+    }else{
+      say('ok','Existing '+d.sym+' debt: short still working','<p>'+owe+' '+esc(d.sym)+' is '+pct(-t.wPct)+' below its weekly 20 EMA, so the downtrend is intact.'+liqTxt+'</p>','Hold');
+    }
+  });
+
+  const order=['danger','gold','warn'], flagged=[];
+  order.forEach(tn=>notes.filter(o=>o.tone===tn).forEach(o=>{ if(o.short&&!flagged.some(f=>f.short===o.short)) flagged.push(o); }));
+  const top=flagged[0];
+  return {headline:flagged.length?flagged.slice(0,2).map(o=>o.short).join(' + '):'Hold',tone:top?top.tone:'ok',notes,signals};
+}
+function managerHTML(m){
+  if(!m) return '';
+  if(m.error) return '<div class="mgr"><b>AI Manager</b><div class="note">Could not run for this account: '+esc(m.error)+'</div></div>';
+  let h='<div class="mgr"><div class="mh"><div><h3>AI Manager</h3><span class="note">Rule-based commentary from your playbook. Not financial advice.</span></div><span class="pill '+m.tone+'">'+esc(m.headline)+'</span></div>';
+  m.notes.forEach(n=>{ h+='<div class="mc t-'+n.tone+'"><b class="t">'+esc(n.title)+'</b>'+n.body+'</div>'; });
+  return h+'</div>';
+}
+const lastSig={};
+function checkSignals(acc,m){
+  const id=accId(acc), now=new Set(m.signals.map(s=>s.id)), prev=lastSig[id];
+  if(prev) m.signals.forEach(s=>{ if(!prev.has(s.id)) pushAlert('Manager - '+acc.label+' ('+netName(acc)+'): '+s.text); });
+  lastSig[id]=now;
+}
+
+// ---------- alerts ----------
+function beep(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.25,0.5].forEach(t=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.frequency.value=880;o.connect(g);g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.15,audioCtx.currentTime+t);
+      o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+0.18);
+    });
+  }catch(e){}
+}
+async function pushAlert(msg){
+  try{ if('Notification' in window&&Notification.permission==='granted') new Notification('Savings Liquidation Manager',{body:msg}); }catch(e){}
+  beep();
+  const subject=msg.split('. ')[0].slice(0,100);
+  const prio=/^DANGER/.test(msg)?5:/^Caution/.test(msg)?4:3;
+  const out=[], jobs=[];
+  const job=(name,fn)=>jobs.push((async()=>{try{out.push({name,ok:!!(await fn())});}catch(e){out.push({name,ok:false});}})());
+  if(state.discord) job('Discord',async()=>(await fetch(state.discord,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:msg})})).ok);
+  if(state.tgToken&&state.tgChat) job('Telegram',async()=>(await fetch('https://api.telegram.org/bot'+state.tgToken+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:state.tgChat,text:msg})})).ok);
+  if(state.wfKey) job('Email',async()=>{
+    const r=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({access_key:state.wfKey,subject:'Savings Liquidation Manager: '+subject,from_name:'Savings Liquidation Manager',message:msg})});
+    const j=await r.json(); return j.success;
+  });
+  if(state.ntfyTopic) job('Phone push',async()=>(await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:state.ntfyTopic,title:'Savings Liquidation Manager',message:msg,priority:prio,tags:[prio===5?'rotating_light':'warning']})})).ok);
+  await Promise.all(jobs);
+  return out;
+}
+function checkAlerts(acc,a){
+  const id=accId(acc), name=acc.label+' ('+netName(acc)+')';
+  const lvl=a.hf===Infinity?0:levelOf(a.hf), prev=lastLevel[id]??0, now=Date.now();
+  const cl=closest(a);
+  const detail=' Collateral '+usd(a.totalColl)+', debt '+usd(a.totalDebt)+'.'+(cl?' Closest: '+cl.sym+' liquidates near '+price(cl.liq)+' ('+(cl.drop*100).toFixed(1)+'% below now).':'');
+  if(lvl>0){
+    const worse=lvl>prev, repeat=lvl===2&&(now-(lastAlertAt[id]||0))>state.cooldown*60000;
+    if(worse||repeat){
+      lastAlertAt[id]=now;
+      pushAlert((lvl===2?'DANGER':'Caution')+' - '+name+': health factor '+a.hf.toFixed(2)+'.'+detail);
+    }
+  }else if(prev>0){
+    pushAlert('Back to safe - '+name+': health factor '+hfText(a.hf)+'.');
+  }
+  lastLevel[id]=lvl;
+}
+
+// ---------- gauge ----------
+function gaugeSVG(hf){
+  const cx=160,cy=150,r=112,sw=24;
+  const lo=1.0, hi=Math.max(2.5,state.warn*1.5);
+  const clampV=v=>Math.min(hi,Math.max(lo,v));
+  const ang=v=>Math.PI*(1-(clampV(v)-lo)/(hi-lo)); // radians, pi=left .. 0=right
+  const pt=(a,rad)=>[cx+rad*Math.cos(a),cy-rad*Math.sin(a)];
+  const arc=(v1,v2,color)=>{
+    const a1=ang(v1),a2=ang(v2),p1=pt(a1,r),p2=pt(a2,r);
+    return '<path d="M'+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A'+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+'" fill="none" stroke="'+color+'" stroke-width="'+sw+'"/>';
+  };
+  const d=Math.min(state.danger,state.warn), w=Math.max(state.danger,state.warn);
+  let s='<svg viewBox="0 0 320 206" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Health factor gauge">';
+  s+=arc(lo,d,'#ff5468')+arc(d,w,'#f2b84b')+arc(w,hi,'#2fd18a');
+  [[lo,'1.0'],[d,d.toFixed(2)],[w,w.toFixed(2)],[hi,hi.toFixed(1)+'+']].forEach(t=>{
+    const a=ang(t[0]),p=pt(a,r+sw/2+13);
+    s+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" fill="#8e9bc4" font-size="11" text-anchor="middle">'+t[1]+'</text>';
+  });
+  const infinite=hf===Infinity, v=infinite?hi:hf;
+  const lvl=infinite?0:levelOf(hf), col=hf<1&&!infinite?'#ff5468':['#2fd18a','#f2b84b','#ff5468'][lvl];
+  const na=ang(v), tip=pt(na,r-sw/2-6), b1=pt(na+Math.PI/2,6), b2=pt(na-Math.PI/2,6);
+  s+='<polygon points="'+tip[0].toFixed(1)+','+tip[1].toFixed(1)+' '+(cx+b1[0]-cx).toFixed(1)+','+(cy+(b1[1]-cy)).toFixed(1)+' '+b2[0].toFixed(1)+','+b2[1].toFixed(1)+'" fill="#e8ecf8"/>';
+  s+='<circle cx="'+cx+'" cy="'+cy+'" r="8" fill="#e8ecf8"/>';
+  const word=infinite?'GOOD':(hf<1?'LIQUIDATABLE':['GOOD','CAUTION','DANGER'][lvl]);
+  s+='<text x="'+cx+'" y="'+(cy+30)+'" fill="'+col+'" font-size="26" font-weight="700" text-anchor="middle">'+(infinite?'No debt':hf.toFixed(2))+'</text>';
+  s+='<text x="'+cx+'" y="'+(cy+46)+'" fill="'+col+'" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="1.5">'+word+'</text>';
+  return s+'</svg>';
+}
+function legendHTML(){
+  const d=Math.min(state.danger,state.warn).toFixed(2), w=Math.max(state.danger,state.warn).toFixed(2);
+  return '<div class="legend"><span><i style="background:#ff5468"></i>Danger: under '+d+'</span><span><i style="background:#f2b84b"></i>Caution: '+d+' to '+w+'</span><span><i style="background:#2fd18a"></i>Good: above '+w+'</span></div>';
+}
+
+// ---------- account picture (collateral vs debt) ----------
+const PAL=['#4f8cff','#9b6bff','#2fd1c5','#f27ba7','#ff9f43','#7bd34f','#c0c6dd','#e0c34a','#5ad1ff','#ff7b6b'];
+const symColor={};
+const colorOf=s=>symColor[s]||(symColor[s]=PAL[Object.keys(symColor).length%PAL.length]);
+function pictureHTML(a,x){
+  const f=s=>isStable(s)?1:1-x;
+  const C=a.colls.map(c=>({sym:c.sym,v:c.val*f(c.sym),w:c.val*f(c.sym)*c.ltEff})).sort((p,q)=>q.v-p.v);
+  const D=a.debts.map(d=>({sym:d.sym,v:d.val*f(d.sym)})).sort((p,q)=>q.v-p.v);
+  const Ct=C.reduce((s,c)=>s+c.v,0), Dt=D.reduce((s,d)=>s+d.v,0), W=C.reduce((s,c)=>s+c.w,0);
+  const max=Math.max(a.colls.reduce((t,c)=>t+c.val,0),a.debts.reduce((t,d)=>t+d.val,0),1), x0=96, bw=530, sc=bw/max, bh=36, yC=40, yD=100; // fixed scale so the stress slider visibly shrinks collateral
+  let s='<svg viewBox="0 0 700 164" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Collateral versus debt">';
+  s+='<text x="0" y="'+(yC+bh/2+4)+'" fill="#e8ecf8" font-size="13" font-weight="700">Collateral</text>';
+  s+='<text x="0" y="'+(yD+bh/2+4)+'" fill="#e8ecf8" font-size="13" font-weight="700">Debt</text>';
+  const bars=(arr,y)=>{let px=x0;arr.forEach(e=>{const w=e.v*sc;if(w<=0)return;
+    s+='<rect x="'+px.toFixed(1)+'" y="'+y+'" width="'+w.toFixed(1)+'" height="'+bh+'" fill="'+colorOf(e.sym)+'" stroke="#0b1020" stroke-width="1"/>';
+    if(w>52) s+='<text x="'+(px+w/2).toFixed(1)+'" y="'+(y+bh/2+4)+'" fill="#0b1020" font-size="12" font-weight="700" text-anchor="middle">'+esc(e.sym)+'</text>';
+    px+=w;});
+    s+='<text x="'+(px+6).toFixed(1)+'" y="'+(y+bh/2+4)+'" fill="#8e9bc4" font-size="12">'+usd(arr.reduce((t,e)=>t+e.v,0))+'</text>';};
+  bars(C,yC);bars(D,yD);
+  if(Dt>0){
+    const lx=x0+W*sc, over=Dt>W;
+    s+='<line x1="'+lx.toFixed(1)+'" y1="26" x2="'+lx.toFixed(1)+'" y2="'+(yD+bh+10)+'" stroke="'+(over?'#ff5468':'#f2b84b')+'" stroke-width="2.5" stroke-dasharray="6 4"/>';
+    const anchor=lx>470?'end':'start', tx=anchor==='end'?lx-4:lx+4;
+    s+='<text x="'+tx.toFixed(1)+'" y="18" fill="'+(over?'#ff5468':'#f2b84b')+'" font-size="12" font-weight="700" text-anchor="'+anchor+'">Liquidation limit '+usd(W)+'</text>';
+  }
+  s+='</svg>';
+  const leg=(arr,t)=>'<div class="pl"><b>'+t+':</b>'+arr.map(e=>'<span><i style="background:'+colorOf(e.sym)+'"></i>'+esc(e.sym)+' '+usd(e.v)+' ('+(Ct&&t==='Collateral'?(e.v/Ct*100):(Dt?e.v/Dt*100:0)).toFixed(0)+'%)</span>').join('')+'</div>';
+  let msg;
+  if(Dt<=0) msg='No debt, so nothing can be liquidated.';
+  else if(W>=Dt) msg='Cushion: <b>'+usd(W-Dt)+'</b> of room before your debt reaches the liquidation limit.';
+  else msg='<b class="danger">Debt is above the liquidation limit, so this position can be liquidated.</b>';
+  return s+leg(C,'Collateral')+(D.length?leg(D,'Debt'):'')+'<div class="cush">'+msg+'</div>';
+}
+
+// ---------- render ----------
+function renderAccount(acc){
+  const r=results[accId(acc)];
+  if(!r) return '';
+  if(r.error) return '<div class="acct"><div class="head"><div><b>'+esc(acc.label)+'</b><span class="badge">'+esc(acc.type)+'</span><span class="badge">'+esc(netName(acc))+'</span><div class="addr">'+esc(acc.addr)+'</div></div></div><div class="err">Could not read this account: '+esc(r.error)+'</div></div>';
+  const a=r.a, lvl=a.hf===Infinity?0:levelOf(a.hf), be=breakEvenDrop(a);
+  const bar=(pct,color)=>'<div class="bar"><i style="width:'+Math.max(2,Math.min(100,pct))+'%;background:'+color+'"></i></div>';
+  let h='<div class="acct" data-addr="'+esc(accId(acc))+'"><div class="head"><div><b>'+esc(acc.label)+'</b><span class="badge">'+esc(acc.type)+'</span><span class="badge">'+esc(netName(acc))+'</span><div class="addr">'+esc(acc.addr)+'</div></div>';
+  h+='<div><span class="pill '+cls(lvl)+'">'+(['Good','Caution','DANGER'][lvl])+'</span></div></div><div class="body">';
+  if(a.totalColl===0&&a.totalDebt===0){
+    return h+'<p class="note">No Aave V3 position found on '+esc(netName(acc))+' for this address. Double-check the address and the network (for Instadapp, use the DSA address).</p></div></div>';
+  }
+  h+='<div class="top"><div class="gwrap"><div class="gg">'+gaugeSVG(a.hf)+'</div><div class="gcap">Current health factor</div>'+legendHTML()+'</div>';
+  h+='<div class="kpis">'
+   +'<div class="kpi"><small>Health factor</small><div class="v '+cls(lvl)+'">'+hfText(a.hf)+'</div></div>'
+   +'<div class="kpi"><small>Collateral</small><div class="v">'+usd(a.totalColl)+'</div></div>'
+   +'<div class="kpi"><small>Debt</small><div class="v">'+usd(a.totalDebt)+'</div></div>'
+   +'<div class="kpi"><small>Market drop that liquidates you</small><div class="v">'+(a.totalDebt===0?'-':be==null?'Not reachable':(be*100).toFixed(1)+'%')+'</div></div>'
+   +'</div></div>';
+  h+='<div class="picwrap"><b>Account picture</b> <span class="note">collateral and debt on the same scale</span><div class="pic">'+pictureHTML(a,0)+'</div></div>';
+  h+=managerHTML(r.m);
+  h+='<b>Collateral</b><table><tr><th>Asset</th><th>Amount</th><th>Price now</th><th>Liquidation price</th><th>Drop to liquidation</th></tr>';
+  a.colls.forEach(c=>{
+    let liq;
+    if(c.liq!=null) liq=price(c.liq);
+    else if(a.totalDebt===0) liq='<span class="note">no debt</span>';
+    else if(c.val<1) liq='<span class="note">dust, ignore</span>';
+    else { const hf0=(a.W-c.val*c.ltEff)/a.D; liq='<span class="ok">None: safe even at $0</span><div class="note">health factor would still be '+hf0.toFixed(2)+'</div>'; }
+    const drop=c.drop==null?'':'<div style="display:flex;gap:8px;align-items:center;justify-content:flex-end">'+(c.drop*100).toFixed(1)+'%'+bar(c.drop*100,c.drop<0.15?'var(--danger)':c.drop<0.3?'var(--warn)':'var(--ok)')+'</div>';
+    h+='<tr><td>'+esc(c.sym)+'</td><td>'+qty(c.amt)+'</td><td>'+price(c.price)+'</td><td>'+liq+'</td><td>'+drop+'</td></tr>';
+  });
+  h+='</table>';
+  if(a.totalDebt>0&&!a.colls.some(c=>!isStable(c.sym)&&c.liq!=null)&&a.colls.some(c=>isStable(c.sym)&&c.liq!=null)){
+    h+='<p class="note"><b>Where your real risk is:</b> your liquidation risk comes from stablecoin prices, not crypto prices. You would be liquidated if a stablecoin you hold as collateral falls to the price shown above (a depeg), or if a stablecoin you owe rises in value.</p>';
+  }
+  if(a.ignored.length){
+    h+='<b>Supplied but not counted toward liquidation</b><table><tr><th>Asset</th><th>Amount</th><th>Value</th><th>Why</th></tr>';
+    a.ignored.forEach(g=>{
+      h+='<tr><td>'+esc(g.sym)+'</td><td>'+qty(g.amt)+'</td><td>'+usd(g.val)+'</td><td>'+(g.reason==='nocf'?'No collateral factor on Aave, so it does not back your borrowing':'Collateral is switched off for this asset')+'</td></tr>';
+    });
+    h+='</table>';
+  }
+  if(a.debts.length){
+    h+='<b>Debt</b><table><tr><th>Asset</th><th>Amount owed</th><th>Price now</th><th>Liquidation price</th><th>Price rise to liquidation</th></tr>';
+    a.debts.forEach(d=>{
+      h+='<tr><td>'+esc(d.sym)+'</td><td>'+qty(d.debtAmt)+'</td><td>'+price(d.price)+'</td><td>'+(d.liq==null?'<span class="note">stablecoin</span>':price(d.liq))+'</td><td>'+(d.rise==null?'':(d.rise*100).toFixed(1)+'%')+'</td></tr>';
+    });
+    h+='</table>';
+    h+='<div class="stress"><b>Stress test</b> &middot; all non-stablecoin assets drop together by <b class="sv">0%</b><input type="range" class="sl" min="0" max="80" value="0"><div>Health factor at that drop: <b class="sh">'+hfText(a.hf)+'</b></div></div>';
+  }
+  return h+'</div></div>';
+}
+function renderAll(){
+  let h='';
+  state.accounts.forEach(acc=>{h+=renderAccount(acc);});
+  $('results').innerHTML=h;
+  document.querySelectorAll('.acct[data-addr]').forEach(el=>{
+    const sl=el.querySelector('.sl'); if(!sl) return;
+    const a=results[el.dataset.addr].a;
+    sl.oninput=()=>{
+      const x=sl.value/100, hf=hfAt(a,x), l=hf===Infinity?0:levelOf(hf);
+      el.querySelector('.sv').textContent=sl.value+'%';
+      el.querySelector('.gg').innerHTML=gaugeSVG(hf);
+      el.querySelector('.pic').innerHTML=pictureHTML(a,x);
+      el.querySelector('.gcap').textContent=x===0?'Current health factor':'Stress test: market down '+sl.value+'%';
+      const sh=el.querySelector('.sh'); sh.textContent=hf<1?hf.toFixed(2)+' (liquidated)':hfText(hf); sh.className='sh '+(hf<1?'danger':cls(l));
+    };
+  });
+}
+function renderList(){
+  $('acctList').innerHTML=state.accounts.map((a,i)=>{
+    const id=accId(a);
+    return '<div class="row" style="margin-top:8px"><span><b>'+esc(a.label)+'</b><span class="badge">'+esc(a.type)+'</span><span class="badge">'+esc(netName(a))+'</span> <span class="addr">'+esc(a.addr)+'</span></span>'
+      +'<label style="flex-direction:row;align-items:center;gap:6px">Reference HF<input data-ref="'+esc(id)+'" type="number" step="0.01" min="1" style="width:84px;min-width:84px" value="'+(state.refs[id]||'')+'"></label>'
+      +'<button class="ghost" data-useref="'+esc(id)+'">Use current</button><button class="ghost" data-rm="'+i+'">Remove</button></div>';
+  }).join('');
+  document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{const gone=state.accounts.splice(Number(b.dataset.rm),1)[0]; if(gone){const id=accId(gone); delete lastLevel[id]; delete results[id]; delete lastSig[id]; delete state.refs[id];} persist();renderList();refresh();});
+  document.querySelectorAll('[data-ref]').forEach(inp=>inp.onchange=()=>{const v=parseFloat(inp.value); if(v>=1) state.refs[inp.dataset.ref]=v; else delete state.refs[inp.dataset.ref]; persist(); refresh();});
+  document.querySelectorAll('[data-useref]').forEach(b=>b.onclick=()=>{const r=results[b.dataset.useref]; if(r&&r.a&&isFinite(r.a.hf)){state.refs[b.dataset.useref]=+r.a.hf.toFixed(3); persist(); renderList(); refresh();}});
+}
+
+// ---------- refresh loop ----------
+async function refresh(){
+  if(!state.accounts.length){ $('status').textContent='Add an address to start.'; $('results').innerHTML=''; return; }
+  $('status').textContent='Reading networks...';
+  const used=new Set(), raws={};
+  await Promise.all(state.accounts.map(async acc=>{
+    const id=accId(acc);
+    try{
+      const raw=await fetchWithFallback(acc.addr,NETS[acc.net]||NETS.avax); used.add(netName(acc)+' via '+raw.rpc);
+      raws[id]=raw;
+    }catch(e){ results[id]={error:(e&&e.shortMessage)||(e&&e.message)||String(e)}; }
+  }));
+  const keys=new Set();
+  Object.values(raws).forEach(raw=>{
+    ((raw.extra&&raw.extra.cands)||[]).forEach(c=>{ if(c.key) keys.add(c.key); });
+    raw.assets.forEach(x=>{ const k=KEYOF(x.sym); if(k&&!isStable(x.sym)) keys.add(k); });
+  });
+  let mk={}; try{ mk=await loadMarket([...keys]); }catch(e){}
+  let needList=false;
+  state.accounts.forEach(acc=>{
+    const id=accId(acc), raw=raws[id]; if(!raw) return;
+    try{
+      const a=analyze(raw);
+      if(isFinite(a.hf)&&!state.refs[id]){ state.refs[id]=+a.hf.toFixed(3); persist(); needList=true; }
+      let m; try{ m=manage(acc,a,raw,mk); }catch(e){ m={error:(e&&e.message)||String(e)}; }
+      results[id]={a,m}; checkAlerts(acc,a);
+      if(m&&!m.error) checkSignals(acc,m);
+    }catch(e){ results[id]={error:(e&&e.shortMessage)||(e&&e.message)||String(e)}; }
+  });
+  if(needList) renderList();
+  renderAll();
+  const worst=Math.max(0,...Object.values(lastLevel));
+  document.title=(worst===2?'\u26A0 DANGER - ':worst===1?'\u26A0 ':'')+'Savings Liquidation Manager';
+  const mv=Object.values(mk), good=mv.filter(v=>v&&!v.err), bad=mv.filter(v=>v&&v.err);
+  const srcs=[...new Set(good.map(v=>v.src).filter(Boolean))];
+  const trend=!mv.length?'':bad.length?' Trend data problem: '+bad[0].err+'.':' Trend data: '+good.length+' coins'+(srcs.length?' via '+srcs.join(', '):'')+(good.some(v=>v.stale)?' (some stale)':'')+'.';
+  $('status').textContent='Updated '+new Date().toLocaleTimeString()+(used.size?' ('+[...used].join(', ')+')':'')+'.'+trend+' Next refresh in '+state.refresh+'s.';
+}
+function startTimer(){ clearInterval(timer); timer=setInterval(refresh,Math.max(20,state.refresh)*1000); }
+
+// ---------- wiring ----------
+function loadFields(){
+  $('warnHF').value=state.warn;$('dangerHF').value=state.danger;$('refreshSec').value=state.refresh;$('cooldownMin').value=state.cooldown;
+  $('discord').value=state.discord;$('tgToken').value=state.tgToken;$('tgChat').value=state.tgChat;
+  $('wfKey').value=state.wfKey;$('ntfyTopic').value=state.ntfyTopic;
+  $('newNet').value=state.lastNet||'avax';
+  $('mFloor').value=state.floor;$('mStep').value=state.step;$('mStress').value=state.stress;
+}
+function readFields(){
+  state.warn=parseFloat($('warnHF').value)||1.5; state.danger=parseFloat($('dangerHF').value)||1.25;
+  state.refresh=parseInt($('refreshSec').value)||60; state.cooldown=parseInt($('cooldownMin').value)||30;
+  state.discord=$('discord').value.trim(); state.tgToken=$('tgToken').value.trim(); state.tgChat=$('tgChat').value.trim();
+  state.wfKey=$('wfKey').value.trim(); state.ntfyTopic=$('ntfyTopic').value.trim();
+  const fl=parseFloat($('mFloor').value); state.floor=fl>=1?fl:1.02;
+  const st=parseFloat($('mStep').value); state.step=st>0?st:15;
+  const sx=parseFloat($('mStress').value); state.stress=sx>=1&&sx<=90?sx:20;
+}
+$('addBtn').onclick=()=>{
+  const addr=$('newAddr').value.trim().toLowerCase(), label=$('newLabel').value.trim()||'Account '+(state.accounts.length+1);
+  if(!ethers.isAddress(addr)){ alert('That does not look like a valid 0x address.'); return; }
+  const net=$('newNet').value;
+  if(state.accounts.some(a=>accId(a)===net+':'+addr)){ alert('That address is already in the list for this network.'); return; }
+  state.accounts.push({label,addr,type:$('newType').value,net}); state.lastNet=net;
+  $('newAddr').value='';$('newLabel').value='';
+  persist();renderList();refresh();
+};
+$('saveBtn').onclick=async()=>{
+  readFields();persist();startTimer();
+  try{ if('Notification' in window&&Notification.permission==='default') await Notification.requestPermission(); }catch(e){}
+  beep(); refresh();
+};
+$('testBtn').onclick=async()=>{
+  readFields(); persist(); $('status').textContent='Sending test alert...';
+  const res=await pushAlert('Test alert from Savings Liquidation Manager. If you can read this, alerts are working.');
+  $('status').textContent='Test sent. '+(res.length?res.map(r=>r.name+': '+(r.ok?'delivered':'FAILED, check the key or name')).join(' | '):'No email, phone push or chat channel is set up yet, so only the sound and desktop notification fired.');
+};
+$('refreshBtn').onclick=refresh;
+
+['mFloor','mStep','mStress'].forEach(id=>{ $(id).onchange=()=>{ readFields(); persist(); refresh(); }; });
+loadFields();renderList();
+if(state.accounts.length){startTimer();refresh();}
+}
+</script>
+</body>
+</html>
